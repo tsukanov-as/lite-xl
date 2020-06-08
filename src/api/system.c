@@ -34,17 +34,64 @@ static char* key_name(char *dst, int sym) {
   return dst;
 }
 
+static const char *debug_event_type(SDL_Event *e) {
+  switch (e->type) {
+    case SDL_QUIT:
+      return "SDL_QUIT";
+    case SDL_WINDOWEVENT:
+      if (e->window.event == SDL_WINDOWEVENT_RESIZED) {
+        return "SDL_WINDOWEVENT_RESIZED";
+      } else if (e->window.event == SDL_WINDOWEVENT_EXPOSED) {
+        return "SDL_WINDOWEVENT_EXPOSED";
+      }
+      if (e->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+        return "SDL_WINDOWEVENT_FOCUS_GAINED";
+      }
+      return "SDL_WINDOWEVENT (UNKNOWN)";
+    case SDL_DROPFILE:
+      return "SDL_DROPFILE";
+    case SDL_KEYDOWN:
+      return "SDL_KEYDOWN";
+    case SDL_KEYUP:
+      return "SDL_KEYUP";
+    case SDL_TEXTINPUT:
+      return "SDL_TEXTINPUT";
+    case SDL_MOUSEBUTTONDOWN:
+      return "SDL_MOUSEBUTTONDOWN";
+    case SDL_MOUSEBUTTONUP:
+      return "SDL_MOUSEBUTTONUP";
+    case SDL_MOUSEMOTION:
+      return "SDL_MOUSEMOTION";
+    case SDL_MOUSEWHEEL:
+      return "SDL_MOUSEWHEEL";
+    default:
+      ;
+  }
+  return "SDL_EVENT (UNKNOWN)";
+}
+
+static FILE *debug_log = NULL;
 
 static int f_poll_event(lua_State *L) {
   char buf[16];
   int mx, my, wx, wy;
   SDL_Event e;
 
+  static int debug_event_index = 0;
+
+  if (!debug_log) {
+    debug_log = fopen("events-debug.log", "w");
+  }
+
 top:
+  debug_event_index++;
   if ( !SDL_PollEvent(&e) ) {
+    fprintf(debug_log, "%04d: PollEvent 0\n", debug_event_index); fflush(debug_log);
     return 0;
   }
 
+  fprintf(debug_log, "%04d: PollEvent: event.type: %s\n", debug_event_index, debug_event_type(&e));
+  fflush(debug_log);
   switch (e.type) {
     case SDL_QUIT:
       lua_pushstring(L, "quit");
@@ -378,6 +425,21 @@ static int f_fuzzy_match(lua_State *L) {
   return 1;
 }
 
+static int f_debug_log(lua_State *L) {
+  int n = lua_gettop(L);
+  lua_getglobal(L, "string");
+  lua_getfield(L, -1, "format");
+  lua_remove(L, -2);
+  lua_insert(L, 1);
+  lua_call(L, n, 1);
+  if (lua_isstring(L, -1)) {
+    const char *s = lua_tostring(L, -1);
+    fputs(s, debug_log);
+    fputs("\n", debug_log);
+    fflush(debug_log);
+  }
+  return 0;
+}
 
 static const luaL_Reg lib[] = {
   { "poll_event",          f_poll_event          },
@@ -397,6 +459,8 @@ static const luaL_Reg lib[] = {
   { "sleep",               f_sleep               },
   { "exec",                f_exec                },
   { "fuzzy_match",         f_fuzzy_match         },
+  // DEBUG
+  { "debug_log",           f_debug_log           },
   { NULL, NULL }
 };
 

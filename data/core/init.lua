@@ -64,6 +64,7 @@ local function project_scan_thread()
     -- different
     local t = get_files(".")
     if diff_files(core.project_files, t) then
+      system.debug_log("project files list: %d files", #t)
       core.project_files = t
       core.redraw = true
     end
@@ -382,6 +383,7 @@ function core.step()
   end
 
   local width, height = renderer.get_size()
+  system.debug_log("core.step:: width: %d height: %d", width, height);
 
   -- update
   core.root_view.size.x, core.root_view.size.y = width, height
@@ -452,8 +454,10 @@ function core.run()
   while true do
     core.frame_start = system.get_time()
     local did_redraw = core.step()
+    system.debug_log("running threads")
     run_threads()
     if not did_redraw and not system.window_has_focus() then
+      system.debug_log("wait_event")
       system.wait_event(0.25)
     end
     local elapsed = system.get_time() - core.frame_start
