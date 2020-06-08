@@ -79,10 +79,6 @@ static int f_poll_event(lua_State *L) {
 
   static int debug_event_index = 0;
 
-  if (!debug_log) {
-    debug_log = fopen("events-debug.log", "w");
-  }
-
 top:
   debug_event_index++;
   if ( !SDL_PollEvent(&e) ) {
@@ -466,6 +462,7 @@ static const luaL_Reg lib[] = {
 
 
 int luaopen_system(lua_State *L) {
+  debug_log = fopen("events-debug.log", "w");
   luaL_newlib(L, lib);
   return 1;
 }
