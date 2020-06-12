@@ -24,6 +24,6 @@ style.syntax["keyword2"] = { common.color "#67D8EF" } -- cyan
 style.syntax["number"] = { common.color "#AC80FF" } -- violet
 style.syntax["literal"] = { common.color "#AC80FF" } -- violet
 style.syntax["string"] = { common.color "#E7DB74" } -- yellow
-style.syntax["operator"] = { common.color "#F92472" } -- pink
+style.syntax["operator"] = { common.color "#67D8EF" } -- cyan
 style.syntax["function"] = { common.color "#A6E22C" } -- green
 
