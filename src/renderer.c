@@ -4,6 +4,7 @@
 #include <math.h>
 #include "renderer.h"
 #include "font_renderer.h"
+#include "debug_log.h"
 
 #define MAX_GLYPHSET 256
 
@@ -68,6 +69,7 @@ void ren_update_rects(RenRect *rects, int count) {
   SDL_UpdateWindowSurfaceRects(window, (SDL_Rect*) rects, count);
   static bool initial_frame = true;
   if (initial_frame) {
+    fprintf(debug_log, "Showing window\n");
     SDL_ShowWindow(window);
     initial_frame = false;
   }

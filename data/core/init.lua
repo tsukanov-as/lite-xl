@@ -64,6 +64,7 @@ local function project_scan_thread()
     -- different
     local t = get_files(".")
     if diff_files(core.project_files, t) then
+      system.debug_log("project files list: %d files", #t)
       core.project_files = t
       core.redraw = true
     end
@@ -176,6 +177,7 @@ function core.load_plugins()
   local no_errors = true
   local files = system.list_dir(EXEDIR .. "/data/plugins")
   for _, filename in ipairs(files) do
+    system.debug_log("loading plugin: %s", filename)
     local modname = "plugins." .. filename:gsub(".lua$", "")
     local ok = core.try(require, modname)
     if ok then
@@ -382,6 +384,7 @@ function core.step()
   end
 
   local width, height = renderer.get_size()
+  system.debug_log("core.step:: width: %d height: %d", width, height);
 
   -- update
   core.root_view.size.x, core.root_view.size.y = width, height
@@ -421,7 +424,10 @@ local run_threads = coroutine.wrap(function()
     local max_time = 1 / config.fps - 0.004
     local ran_any_threads = false
 
+    local count = 0
     for k, thread in pairs(core.threads) do
+      count = count + 1
+      system.debug_log("thread number: %d", count)
       -- run thread
       if thread.wake < system.get_time() then
         local _, wait = assert(coroutine.resume(thread.cr))
@@ -432,18 +438,21 @@ local run_threads = coroutine.wrap(function()
             core.threads[k] = nil
           end
         elseif wait then
+          system.debug_log("thread yielded with wait: %g", wait)
           thread.wake = system.get_time() + wait
+        else
+          system.debug_log("thread yielded with wait=nil")
         end
         ran_any_threads = true
       end
 
       -- stop running threads if we're about to hit the end of frame
       if system.get_time() - core.frame_start > max_time then
-        coroutine.yield()
+        coroutine.yield(true)
       end
     end
 
-    if not ran_any_threads then coroutine.yield() end
+    if not ran_any_threads then coroutine.yield(false) end
   end
 end)
 
@@ -452,8 +461,10 @@ function core.run()
   while true do
     core.frame_start = system.get_time()
     local did_redraw = core.step()
-    run_threads()
+    system.debug_log("running threads")
+    local need_more_work = run_threads()
     if not did_redraw and not system.window_has_focus() then
+      system.debug_log("wait_event")
       system.wait_event(0.25)
     end
     local elapsed = system.get_time() - core.frame_start
