@@ -81,7 +81,7 @@ core.add_thread(function()
     end
 
   end
-end)
+end, nil, "autocomplete")
 
 
 local partial = ""

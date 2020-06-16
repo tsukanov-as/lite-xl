@@ -34,7 +34,7 @@ function Highlighter:new(doc)
         coroutine.yield()
       end
     end
-  end, self)
+  end, self, "highlighter")
 end
 
 

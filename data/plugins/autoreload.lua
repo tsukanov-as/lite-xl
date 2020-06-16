@@ -41,7 +41,7 @@ core.add_thread(function()
     -- wait for next scan
     coroutine.yield(config.project_scan_rate)
   end
-end)
+end, nil, "autoreload")
 
 
 -- patch `Doc.save|load` to store modified time

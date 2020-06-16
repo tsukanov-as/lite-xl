@@ -111,7 +111,7 @@ function core.init()
   core.root_view.root_node:split("down", core.command_view, true)
   core.root_view.root_node.b:split("down", core.status_view, true)
 
-  core.add_thread(project_scan_thread)
+  core.add_thread(project_scan_thread, nil, "project scan")
   command.add_defaults()
   local got_plugin_error = not core.load_plugins()
   local got_user_error = not core.try(require, "user")
@@ -224,10 +224,10 @@ function core.set_active_view(view)
 end
 
 
-function core.add_thread(f, weak_ref)
+function core.add_thread(f, weak_ref, name)
   local key = weak_ref or #core.threads + 1
   local fn = function() return core.try(f) end
-  core.threads[key] = { cr = coroutine.create(fn), wake = 0 }
+  core.threads[key] = { cr = coroutine.create(fn), wake = 0, name = name or "unknown" }
 end
 
 
@@ -427,9 +427,9 @@ local run_threads = coroutine.wrap(function()
     local count = 0
     for k, thread in pairs(core.threads) do
       count = count + 1
-      system.debug_log("thread number: %d", count)
       -- run thread
       if thread.wake < system.get_time() then
+        system.debug_log("running thread %d, name = %s", count, thread.name)
         local _, wait = assert(coroutine.resume(thread.cr))
         if coroutine.status(thread.cr) == "dead" then
           if type(k) == "number" then
