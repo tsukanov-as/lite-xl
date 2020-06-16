@@ -422,7 +422,7 @@ end
 local run_threads = coroutine.wrap(function()
   while true do
     local max_time = 1 / config.fps - 0.004
-    local ran_any_threads = false
+    local need_more_work = false
 
     local count = 0
     for k, thread in pairs(core.threads) do
@@ -442,8 +442,8 @@ local run_threads = coroutine.wrap(function()
           thread.wake = system.get_time() + wait
         else
           system.debug_log("thread yielded with wait=nil")
+          need_more_work = true
         end
-        ran_any_threads = true
       end
 
       -- stop running threads if we're about to hit the end of frame
@@ -452,7 +452,7 @@ local run_threads = coroutine.wrap(function()
       end
     end
 
-    if not ran_any_threads then coroutine.yield(false) end
+    if not need_more_work then coroutine.yield(false) end
   end
 end)
 
@@ -463,6 +463,9 @@ function core.run()
     local did_redraw = core.step()
     system.debug_log("running threads")
     local need_more_work = run_threads()
+    if need_more_work then
+      system.debug_log("more work needed for threads")
+    end
     if not did_redraw and not need_more_work then
       system.debug_log("wait_event (no timeout)")
       system.wait_event()
