@@ -63,8 +63,8 @@ local function project_scan_thread()
     -- get project files and replace previous table if the new table is
     -- different
     local t = get_files(".")
-    if diff_files(core.project_files, t) then
-      core.project_files = t
+    if diff_files(core.project.files, t) then
+      core.project.files = t
       core.redraw = true
     end
 
@@ -73,6 +73,14 @@ local function project_scan_thread()
   end
 end
 
+function core.set_project_dir(new_dir)
+  core.project = {
+    dir = new_dir,
+    files = {},
+  }
+  system.chdir(new_dir)
+  core.add_thread(project_scan_thread, core.project)
+end
 
 function core.init()
   command = require "core.command"
@@ -82,25 +90,27 @@ function core.init()
   CommandView = require "core.commandview"
   Doc = require "core.doc"
 
-  local project_dir = EXEDIR
+  core.project = {
+    dir = EXEDIR,
+    files = {},
+  }
   local files = {}
   for i = 2, #ARGS do
     local info = system.get_file_info(ARGS[i]) or {}
     if info.type == "file" then
       table.insert(files, system.absolute_path(ARGS[i]))
     elseif info.type == "dir" then
-      project_dir = ARGS[i]
+      core.project.dir = ARGS[i]
     end
   end
 
-  system.chdir(project_dir)
+  system.chdir(core.project.dir)
 
   core.frame_start = 0
   core.clip_rect_stack = {{ 0,0,0,0 }}
   core.log_items = {}
   core.docs = {}
   core.threads = setmetatable({}, { __mode = "k" })
-  core.project_files = {}
   core.redraw = true
 
   core.root_view = RootView()
@@ -110,7 +120,7 @@ function core.init()
   core.root_view.root_node:split("down", core.command_view, true)
   core.root_view.root_node.b:split("down", core.status_view, true)
 
-  core.add_thread(project_scan_thread)
+  core.add_thread(project_scan_thread, core.project)
   command.add_defaults()
   local got_plugin_error = not core.load_plugins()
   local got_user_error = not core.try(require, "user")

@@ -60,7 +60,7 @@ command.add(nil, {
       core.root_view:open_doc(core.open_doc(text))
     end, function(text)
       local files = {}
-      for _, item in pairs(core.project_files) do
+      for _, item in pairs(core.project.files) do
         if item.type == "file" then
           table.insert(files, item.filename)
         end

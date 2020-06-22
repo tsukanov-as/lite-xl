@@ -55,11 +55,11 @@ end
 
 function TreeView:check_cache()
   -- invalidate cache's skip values if project_files has changed
-  if core.project_files ~= self.last_project_files then
+  if core.project.files ~= self.last_project_files then
     for _, v in pairs(self.cache) do
       v.skip = nil
     end
-    self.last_project_files = core.project_files
+    self.last_project_files = core.project.files
   end
 end
 
@@ -73,8 +73,8 @@ function TreeView:each_item()
     local h = self:get_item_height()
 
     local i = 1
-    while i <= #core.project_files do
-      local item = core.project_files[i]
+    while i <= #core.project.files do
+      local item = core.project.files[i]
       local cached = self:get_cached(item)
 
       coroutine.yield(cached, ox, y, w, h)
@@ -86,8 +86,8 @@ function TreeView:each_item()
           i = cached.skip
         else
           local depth = cached.depth
-          while i <= #core.project_files do
-            local filename = core.project_files[i].filename
+          while i <= #core.project.files do
+            local filename = core.project.files[i].filename
             if get_depth(filename) <= depth then break end
             i = i + 1
           end

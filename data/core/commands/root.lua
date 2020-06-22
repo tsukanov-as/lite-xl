@@ -6,6 +6,12 @@ local common = require "core.common"
 
 
 local t = {
+  ["root:open-project"] = function()
+    core.command_view:enter("Open Directory", function(text)
+      core.set_project_dir(text)
+    end, common.path_suggest)
+  end,
+
   ["root:close"] = function()
     local node = core.root_view:get_active_node()
     node:close_active_view(core.root_view.root_node)
