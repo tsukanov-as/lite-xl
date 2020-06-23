@@ -1,14 +1,27 @@
 local core = require "core"
 local style = require "core.style"
 local DocView = require "core.docview"
+local RootView = require "core.rootview"
 local command = require "core.command"
 local common = require "core.common"
 
 
 local t = {
   ["root:open-project"] = function()
+    -- FIXME: if the user cancel the operatio we should abort.
     core.command_view:enter("Open Directory", function(text)
+      -- FIXME: doesn't work, it blocks.
+      --[[
+      local f_active_nodes = function() return core.root_view:get_active_node() end
+      for node in f_active_nodes do
+        node:close_active_view(core.root_view.root_node)
+      end
+      --]]
+      core.docs = {}
+      core.root_view = RootView()
+      -- for _, doc in core.docs do
       core.set_project_dir(text)
+    -- FIXME: use something like common.dir_suggest if it does exist
     end, common.path_suggest)
   end,
 
