@@ -7,12 +7,14 @@
 #include <sys/stat.h>
 #include "api.h"
 #include "rencache.h"
+#include "debug_log.h"
 #ifdef _WIN32
   #include <windows.h>
 #endif
 
 extern SDL_Window *window;
 
+FILE *debug_log = NULL;
 
 static const char* button_name(int button) {
   switch (button) {
@@ -383,6 +385,21 @@ static int f_fuzzy_match(lua_State *L) {
   return 1;
 }
 
+static int f_debug_log(lua_State *L) {
+  int n = lua_gettop(L);
+  lua_getglobal(L, "string");
+  lua_getfield(L, -1, "format");
+  lua_remove(L, -2);
+  lua_insert(L, 1);
+  lua_call(L, n, 1);
+  if (lua_isstring(L, -1)) {
+    const char *s = lua_tostring(L, -1);
+    fputs(s, debug_log);
+    fputs("\n", debug_log);
+    fflush(debug_log);
+  }
+  return 0;
+}
 
 static const luaL_Reg lib[] = {
   { "poll_event",          f_poll_event          },
@@ -402,11 +419,13 @@ static const luaL_Reg lib[] = {
   { "sleep",               f_sleep               },
   { "exec",                f_exec                },
   { "fuzzy_match",         f_fuzzy_match         },
+  { "debug_log",           f_debug_log           },
   { NULL, NULL }
 };
 
 
 int luaopen_system(lua_State *L) {
+  debug_log = fopen(".lite-debug.log", "w");
   luaL_newlib(L, lib);
   return 1;
 }
