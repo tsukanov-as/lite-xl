@@ -92,7 +92,7 @@ public:
     template<class Rasterizer, class Scanline, class RenSolid>
     void draw_codepoint(Rasterizer& ras, Scanline& sl,
         RenSolid& ren_solid, const color_type color,
-        int codepoint, double& x, double& y, int subpixel_scale)
+        int codepoint, double& x, double& y, int subpixel_scale, agg::rect_i& bounding_rect)
     {
         const double scale_x = (m_prescale_x ? 100.0 : 1.0);
 
@@ -111,14 +111,20 @@ public:
             m_fman.init_embedded_adaptors(glyph, 0, 0);
             if(glyph->data_type == agg::glyph_data_outline)
             {
-                double ty = m_hinting ? floor(y + 0.5) : y;
+                const double tx = start_x + x_delta / scale_x;
+                const double ty = m_hinting ? floor(y + 0.5) : y;
                 ras.reset();
                 m_mtx.reset();
                 m_mtx *= agg::trans_affine_scaling(1.0 / scale_x, 1);
-                m_mtx *= agg::trans_affine_translation(start_x + x_delta / scale_x, ty);
+                m_mtx *= agg::trans_affine_translation(tx, ty);
                 ras.add_path(m_trans);
                 ren_solid.color(color);
                 agg::render_scanlines(ras, sl, ren_solid);
+                const agg::rect_i& b = m_feng.bounds();
+                bounding_rect.x1 = b.x1 / scale_x + tx;
+                bounding_rect.y1 = b.y1 + ty;
+                bounding_rect.x2 = b.x2 / scale_x + tx;
+                bounding_rect.y2 = b.y2 + ty;
             }
 
             y += glyph->advance_y;
@@ -135,7 +141,7 @@ public:
     void render_codepoint(agg::rendering_buffer& ren_buf,
         const color_type text_color,
         double& x, double& y,
-        int codepoint, int subpixel_scale)
+        int codepoint, int subpixel_scale, agg::rect_i& bounding_rect)
     {
         if (!m_font_loaded) {
             return;
@@ -147,6 +153,6 @@ public:
         agg::pixfmt_alpha8 pf(ren_buf);
         base_ren_type ren_base(pf);
         renderer_solid ren_solid(ren_base);
-        draw_codepoint(ras, sl, ren_solid, text_color, codepoint, x, y, subpixel_scale);
+        draw_codepoint(ras, sl, ren_solid, text_color, codepoint, x, y, subpixel_scale, bounding_rect);
     }
 };

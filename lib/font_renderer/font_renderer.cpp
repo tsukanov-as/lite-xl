@@ -187,6 +187,10 @@ int FR_Bake_Font_Bitmap(FR_Renderer *font_renderer, int font_height,
     const int y_step = font_height + 2 * pad_y;
 
     agg::rendering_buffer ren_buf(pixels, pixels_width * subpixel_scale, pixels_height, -pixels_width * subpixel_scale * pixel_size);
+
+    const int ren_zone_width = font_height * 8, ren_zone_height = font_height * 4;
+    agg::int8u *ren_zone_pixels = new agg::int8u[ren_zone_width * subpixel_scale * ren_zone_height * pixel_size];
+    agg::rendering_buffer ren_zone_buf(ren_zone_pixels, ren_zone_width * subpixel_scale, ren_zone_height, -ren_zone_width * subpixel_scale * pixel_size);
     // When using subpixel font rendering it is needed to leave a padding pixel on the left and on the right.
     // Since each pixel is composed by n subpixel we set below x_start to subpixel_scale instead than zero.
     const int x_start = subpixel_scale;
@@ -213,8 +217,12 @@ int FR_Bake_Font_Bitmap(FR_Renderer *font_renderer, int font_height,
         const int y_baseline = y - pad_y - ascender_px;
 
         double x_next = x, y_next = y_baseline;
-        renderer_alpha.render_codepoint(ren_buf, text_color, x_next, y_next, codepoint, subpixel_scale);
+        agg::rect_i bounding_rect;
+        // renderer_alpha.render_codepoint(ren_buf, text_color, x_next, y_next, codepoint, subpixel_scale, bounding_rect);
+        // FIXME: CONTINUE from here to use ren_zone_buf.
+        renderer_alpha.render_codepoint(ren_buf, text_color, x_next, y_next, codepoint, subpixel_scale, bounding_rect);
         int x_next_i = (subpixel_scale == 1 ? int(x_next + 1.0) : ceil_to_multiple(x_next + 0.5, subpixel_scale));
+        fprintf(stderr, "glyph bounds: (%d, %d), (%d, %d) (%d, %d)\n", x, y_baseline, bounding_rect.x1, bounding_rect.y1, bounding_rect.x2, bounding_rect.y2);
 
         // Below x and x_next_i will always be integer multiples of subpixel_scale.
         FR_Bitmap_Glyph_Metrics& glyph_info = glyphs[i];
