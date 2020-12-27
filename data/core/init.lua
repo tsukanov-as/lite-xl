@@ -265,6 +265,43 @@ function core.add_project_directory(path)
   })
 end
 
+
+local function compat_project_files()
+  local build_item = function(item)
+    local new_item = {}
+    for k, v in pairs(item) do
+      new_item[k] = v
+    end
+    new_item.filename = item.filename:sub(2)
+    return new_item
+  end
+
+  local files_iter = function(files, i)
+    if files[i + 1] then
+      return i + 1, build_item(files[i + 1])
+    end
+  end
+
+  local mt = {
+    __index = function(_, i)
+      local dir = core.project_directories[1]
+      local item = dir.files[i]
+      if item then
+        return build_item(item)
+      end
+    end,
+    __ipairs = function()
+      return files_iter, core.project_directories[1].files, 0
+    end,
+    __len = function()
+      local dir = core.project_directories[1]
+      return #dir.files
+    end
+  }
+  return setmetatable({}, mt)
+end
+
+
 function core.init()
   command = require "core.command"
   keymap = require "core.keymap"
@@ -298,6 +335,7 @@ function core.init()
   core.project_dir = system.absolute_path(".")
   core.project_directories = {}
   core.add_project_directory(core.project_dir)
+  core.project_files = compat_project_files()
   core.redraw = true
   core.visited_files = {}
   core.restart_request = false
