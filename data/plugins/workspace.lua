@@ -4,15 +4,40 @@ local DocView = require "core.docview"
 local workspace_filename = ".lite_workspace.lua"
 
 
+local function is_identifier(s)
+  return type(s) == "string" and s:match('[%a_][%w_]*')
+end
+
+
+local function is_array(t)
+  local n = #t
+  local c = 0
+  for k, v in pairs(t) do
+    if type(k) ~= "number" or k < 1 or k > n then
+      return false
+    end
+    c = c + 1
+  end
+  return c == n
+end
+
+
 local function serialize(val)
   if type(val) == "string" then
     return string.format("%q", val)
   elseif type(val) == "table" then
     local t = {}
-    for k, v in pairs(val) do
-      table.insert(t, "[" .. serialize(k) .. "]=" .. serialize(v))
+    if is_array(val) then
+      for i = 1, #val do
+        t[i] = serialize(val[i])
+      end
+    else
+      for k, v in pairs(val) do
+        local kstr = is_identifier(k) and k .. " = " or "[" .. serialize(k) .. "] = "
+        table.insert(t, kstr .. serialize(v))
+      end
     end
-    return "{" .. table.concat(t, ",") .. "}"
+    return "{" .. table.concat(t, ", ") .. "}"
   end
   return tostring(val)
 end
