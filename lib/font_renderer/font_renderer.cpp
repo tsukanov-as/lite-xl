@@ -1,3 +1,5 @@
+#include <fmt/core.h>
+
 #include "font_renderer.h"
 
 #include "agg_lcd_distribution_lut.h"
@@ -6,6 +8,9 @@
 
 #include "font_renderer_alpha.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 // Important: when a subpixel scale is used the width below will be the width in logical pixel.
 // As each logical pixel contains 3 subpixels it means that the 'pixels' pointer
 // will hold enough space for '3 * width' uint8_t values.
@@ -13,6 +18,37 @@ struct FR_Bitmap {
     agg::int8u *pixels;
     int width, height;
 };
+
+static FR_Bitmap *debug_bitmap_to_image_rgb(FR_Bitmap *alpha_bitmap, const int subpixel_scale) {
+    const int w = alpha_bitmap->width, h = alpha_bitmap->height;
+    const int rgb_comp = 3;
+
+    fmt::print("W: {} H: {}\n", w, h);
+
+    FR_Bitmap *rgb_image = (FR_Bitmap *) malloc(sizeof(FR_Bitmap) + w * h * rgb_comp);
+    if (!rgb_image) { return nullptr; }
+    rgb_image->pixels = (agg::int8u *) (rgb_image + 1);
+    rgb_image->width = w;
+    rgb_image->height = h;
+
+    agg::int8u *dst_ptr = rgb_image->pixels, *src_ptr = alpha_bitmap->pixels;
+    for (int y = 0; y < alpha_bitmap->height; y++) {
+        for (int x = 0; x < alpha_bitmap->width; x++) {
+            if (subpixel_scale == 3) {
+                dst_ptr[0] = 0xff - src_ptr[0];
+                dst_ptr[1] = 0xff - src_ptr[1];
+                dst_ptr[2] = 0xff - src_ptr[2];
+            } else {
+                dst_ptr[0] = 0xff - src_ptr[0];
+                dst_ptr[1] = 0xff - src_ptr[0];
+                dst_ptr[2] = 0xff - src_ptr[0];
+            }
+            src_ptr += subpixel_scale;
+            dst_ptr += rgb_comp;
+        }
+    }
+    return rgb_image;
+}
 
 class FR_Renderer {
 public:
@@ -28,6 +64,8 @@ public:
     font_renderer_alpha& renderer_alpha() { return m_renderer; }
     agg::lcd_distribution_lut& lcd_distribution_lut() { return m_lcd_lut; }
     int subpixel_scale() const { return (m_subpixel ? 3 : 1); }
+
+    std::string debug_font_name;
 
 private:
     font_renderer_alpha m_renderer;
@@ -63,6 +101,12 @@ void FR_Renderer_Free(FR_Renderer *font_renderer) {
 
 int FR_Load_Font(FR_Renderer *font_renderer, const char *filename) {
     bool success = font_renderer->renderer_alpha().load_font(filename);
+    if (success) {
+        std::string fullname = filename;
+        size_t a = fullname.find_last_of("/");
+        size_t b = fullname.find_last_of(".");
+        font_renderer->debug_font_name = fullname.substr(a + 1, b - a - 1);
+    }
     return (success ? 0 : 1);
 }
 
@@ -163,6 +207,34 @@ static int ceil_to_multiple(int n, int p) {
     return p * ((n + p - 1) / p);
 }
 
+static void debug_rgb_image_write_glyphs_bbox(FR_Bitmap *rgb_image,
+    int subpixel_scale, int num_chars,
+    FR_Bitmap_Glyph_Metrics *glyphs, agg::int32u color)
+{
+    const int rgb_comp = 3;
+    for (int i = 0; i < num_chars; i++) {
+        FR_Bitmap_Glyph_Metrics& gi = glyphs[i];
+
+        int y = gi.y0;
+        agg::int8u *row = rgb_image->pixels + (rgb_image->width * y + gi.x0) * rgb_comp;
+        for (int x = gi.x0; x < gi.x1; x++) {
+            row[0] = (color >> 0 ) & 0xff; // (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
+            row[1] = (color >> 8 ) & 0xff; // (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
+            row[2] = (color >> 16) & 0xff; // (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
+            row += rgb_comp;
+        }
+
+        y = gi.y1;
+        row = rgb_image->pixels + (rgb_image->width * y + gi.x0) * rgb_comp;
+        for (int x = gi.x0; x < gi.x1; x++) {
+            row[0] = (color >> 0 ) & 0xff; // (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
+            row[1] = (color >> 8 ) & 0xff; // (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
+            row[2] = (color >> 16) & 0xff; // (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
+            row += rgb_comp;
+        }
+    }
+}
+
 FR_Bitmap *FR_Bake_Font_Bitmap(FR_Renderer *font_renderer, int font_height,
     int first_char, int num_chars, FR_Bitmap_Glyph_Metrics *glyphs)
 {
@@ -240,6 +312,7 @@ FR_Bitmap *FR_Bake_Font_Bitmap(FR_Renderer *font_renderer, int font_height,
 
     const int pixels_height = -y_bottom + 1;
     const int pixel_size = 1;
+    fmt::print("image size: {} {}\n", pixels_width, pixels_height);
     FR_Bitmap *image = FR_Bitmap_New(font_renderer, pixels_width, pixels_height);
 
     agg::int8u *pixels = image->pixels;
@@ -296,6 +369,15 @@ FR_Bitmap *FR_Bake_Font_Bitmap(FR_Renderer *font_renderer, int font_height,
     delete [] index;
     delete [] bounds;
     delete [] cover_swap_buffer;
+
+    std::string image_filename = fmt::format("{}-{}-{}.png", font_renderer->debug_font_name, first_char, font_height);
+    fmt::print("{}\n", image_filename);
+
+    FR_Bitmap *rgb_image = debug_bitmap_to_image_rgb(image, subpixel_scale);
+    debug_rgb_image_write_glyphs_bbox(rgb_image, subpixel_scale, num_chars, glyphs, 0x00ff00);
+    stbi_write_png(image_filename.c_str(), rgb_image->width, rgb_image->height, 3, rgb_image->pixels, rgb_image->width * 3);
+    FR_Bitmap_Free(rgb_image);
+
     return image;
 }
 
