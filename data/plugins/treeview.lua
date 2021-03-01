@@ -51,19 +51,27 @@ function TreeView:get_cached(item, dirname)
   local t = dir_cache[cache_name]
   if not t then
     t = {}
-    local basename = common.basename(item.filename)
-    if item.topdir then
-      t.filename = basename
-      t.expanded = true
+    if item.type == 'file' and item.topdir then
+      t.filename = item.filename
       t.depth = 0
       t.abs_filename = dirname
+      t.name = item.filename
+      t.type = item.type
     else
-      t.filename = item.filename
-      t.depth = get_depth(item.filename)
-      t.abs_filename = dirname .. PATHSEP .. item.filename
+      local basename = common.basename(item.filename)
+      if item.topdir then
+        t.filename = basename
+        t.expanded = true
+        t.depth = 0
+        t.abs_filename = dirname
+      else
+        t.filename = item.filename
+        t.depth = get_depth(item.filename)
+        t.abs_filename = dirname .. PATHSEP .. item.filename
+      end
+      t.name = basename
+      t.type = item.type
     end
-    t.name = basename
-    t.type = item.type
     dir_cache[cache_name] = t
   end
   return t
@@ -110,8 +118,17 @@ function TreeView:each_item()
 
     for k = 1, #core.project_entries do
       local dir = core.project_entries[k]
+      if dir.item.type == "file" and dir.item.topdir then
+        print('dir', common.serialize(dir))
+      end
       local dir_cached = self:get_cached(dir.item, dir.name)
+      if dir.item.type == "file" and dir.item.topdir then
+        print('cache', common.serialize(dir_cached))
+      end
       coroutine.yield(dir_cached, ox, y, w, h)
+      if dir.item.type == "file" and dir.item.topdir then
+        print('file topdir yielded')
+      end
       count_lines = count_lines + 1
       y = y + h
       local i = 1
@@ -137,6 +154,9 @@ function TreeView:each_item()
           end
         end
       end -- while files
+      if dir.item.type == "file" and dir.item.topdir then
+        print('loop over files terminated')
+      end
     end -- for directories
     self.count_lines = count_lines
   end)
@@ -250,6 +270,7 @@ function TreeView:draw()
 
     -- text
     x = x + spacing
+    print('item.name', item.name)
     x = common.draw_text(style.font, color, item.name, nil, x, y, 0, h)
   end
 

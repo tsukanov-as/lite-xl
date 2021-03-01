@@ -151,7 +151,7 @@ local function project_scan_thread()
     -- different
     for i = 1, #core.project_entries do
       local dir = core.project_entries[i]
-      if dir.type == 'dir' then
+      if dir.item.type == 'dir' then
         local t, entries_count = get_files(dir.name, "")
         if diff_files(dir.files, t) then
           if entries_count > config.max_project_files then
@@ -307,9 +307,9 @@ end
 function core.add_project_file(path)
   path = normalize_path(path)
   table.insert(core.project_entries, {
-    type = 'file',
+    -- type = 'file',
     name = path,
-    item = {filename = common.basename(path), type = "file"},
+    item = {filename = common.basename(path), type = "file", topdir = true},
     files = {path}
   })
 end
@@ -321,7 +321,7 @@ function core.add_project_directory(path)
   -- The field item.topdir will identify it as a top level directory.
   path = normalize_path(path)
   table.insert(core.project_entries, {
-    type = 'dir',
+    -- type = 'dir',
     name = path,
     item = {filename = common.basename(path), type = "dir", topdir = true},
     files = {}
