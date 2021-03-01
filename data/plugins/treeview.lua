@@ -82,8 +82,8 @@ end
 
 function TreeView:check_cache()
   -- invalidate cache's skip values if project_files has changed
-  for i = 1, #core.project_directories do
-    local dir = core.project_directories[i]
+  for i = 1, #core.project_entries do
+    local dir = core.project_entries[i]
     local last_files = self.last[dir.name]
     if not last_files then
       self.last[dir.name] = dir.files
@@ -108,8 +108,8 @@ function TreeView:each_item()
     local w = self.size.x
     local h = self:get_item_height()
 
-    for k = 1, #core.project_directories do
-      local dir = core.project_directories[k]
+    for k = 1, #core.project_entries do
+      local dir = core.project_entries[k]
       local dir_cached = self:get_cached(dir.item, dir.name)
       coroutine.yield(dir_cached, ox, y, w, h)
       count_lines = count_lines + 1

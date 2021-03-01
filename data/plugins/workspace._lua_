@@ -167,7 +167,7 @@ local function split_on_slash(s, sep_pattern)
   return t
 end
 
-
+--[[
 local function relative_path(ref_dir, dir)
   local ref_ls = split_on_slash(ref_dir)
   local dir_ls = split_on_slash(dir)
@@ -185,13 +185,13 @@ local function relative_path(ref_dir, dir)
   local rel_path = ups .. table.concat(dir_ls, "/", i)
   return rel_path ~= "" and rel_path or "."
 end
-
+]]
 
 local function save_directories()
-  local project_dir = core.project_dir
+  -- local project_dir = core.project_dir
   local dir_list = {}
-  for i = 2, #core.project_directories do
-    dir_list[#dir_list + 1] = relative_path(project_dir, core.project_directories[i].name)
+  for i = 1, #core.project_entries do
+    dir_list[#dir_list + 1] = core.project_entries[i].name -- relative_path(project_dir, core.project_directories[i].name)
   end
   return dir_list
 end
@@ -199,7 +199,8 @@ end
 
 local function save_workspace()
   local root = get_unlocked_root(core.root_view.root_node)
-  local workspace_filename = get_workspace_filename(core.project_dir)
+  -- FIXME: treat the case when there are no project_entries
+  local workspace_filename = get_workspace_filename(core.project_entries[1].name)
   local fp = io.open(workspace_filename, "w")
   if fp then
     local node_text = common.serialize(save_node(root))
@@ -211,7 +212,8 @@ end
 
 
 local function load_workspace()
-  local workspace = load_workspace_file(core.project_dir)
+  -- FIXME: check the logic for all the workspace load/save stuff
+  local workspace = load_workspace_file(core.project_entries[1].name)
   if workspace then
     local root = get_unlocked_root(core.root_view.root_node)
     local active_view = load_node(root, workspace.documents)
