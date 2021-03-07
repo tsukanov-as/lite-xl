@@ -50,6 +50,31 @@ static FR_Bitmap *debug_bitmap_to_image_rgb(FR_Bitmap *alpha_bitmap, const int s
     return rgb_image;
 }
 
+static FR_Bitmap *debug_bitmap_to_image_rgb_subpixel(FR_Bitmap *alpha_bitmap, const int subpixel_scale) {
+    const int w = alpha_bitmap->width, h = alpha_bitmap->height;
+    const int rgb_comp = 3;
+
+    FR_Bitmap *rgb_image = (FR_Bitmap *) malloc(sizeof(FR_Bitmap) + subpixel_scale * w * h * rgb_comp);
+    if (!rgb_image) { return nullptr; }
+    rgb_image->pixels = (agg::int8u *) (rgb_image + 1);
+    rgb_image->width = subpixel_scale * w;
+    rgb_image->height = h;
+
+    agg::int8u *dst_ptr = rgb_image->pixels, *src_ptr = alpha_bitmap->pixels;
+    for (int y = 0; y < alpha_bitmap->height; y++) {
+        for (int x = 0; x < alpha_bitmap->width; x++) {
+            for (int sub = 0; sub < subpixel_scale; sub++) {
+                dst_ptr[0] = 0xff - src_ptr[sub];
+                dst_ptr[1] = 0xff - src_ptr[sub];
+                dst_ptr[2] = 0xff - src_ptr[sub];
+                dst_ptr += rgb_comp;
+            }
+            src_ptr += subpixel_scale;
+        }
+    }
+    return rgb_image;
+}
+
 class FR_Renderer {
 public:
     // Conventional LUT values: (1./3., 2./9., 1./9.)
@@ -220,7 +245,7 @@ static int div_neg(int n, int p) {
     return n >= 0 ? (n / p) : ((n - p + 1) / p);
 }
 
-static void debug_rgb_image_write_glyphs_bbox(FR_Bitmap *rgb_image,
+static void debug_image_write_glyphs(FR_Bitmap *rgb_image,
     int subpixel_scale, int num_chars,
     FR_Bitmap_Glyph_Metrics *glyphs, agg::int32u color)
 {
@@ -244,6 +269,38 @@ static void debug_rgb_image_write_glyphs_bbox(FR_Bitmap *rgb_image,
             row[1] = (color >> 8 ) & 0xff; // (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
             row[2] = (color >> 16) & 0xff; // (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
             row += rgb_comp;
+        }
+    }
+}
+
+static void debug_image_write_glyphs_subpixel(FR_Bitmap *rgb_image,
+    int subpixel_scale, int num_chars,
+    FR_Bitmap_Glyph_Metrics *glyphs, agg::int32u color)
+{
+    const int rgb_comp = 3;
+    for (int i = 0; i < num_chars; i++) {
+        FR_Bitmap_Glyph_Metrics& gi = glyphs[i];
+
+        int y = gi.y0;
+        agg::int8u *row = rgb_image->pixels + (rgb_image->width * y + subpixel_scale * gi.x0) * rgb_comp;
+        for (int x = gi.x0; x < gi.x1; x++) {
+            for (int sub = 0; sub < subpixel_scale; sub++) {
+                row[0] = (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
+                row[1] = (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
+                row[2] = (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
+                row += rgb_comp;
+            }
+        }
+
+        y = gi.y1;
+        row = rgb_image->pixels + (rgb_image->width * y + subpixel_scale * gi.x0) * rgb_comp;
+        for (int x = gi.x0; x < gi.x1; x++) {
+            for (int sub = 0; sub < subpixel_scale; sub++) {
+                row[0] = (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
+                row[1] = (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
+                row[2] = (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
+                row += rgb_comp;
+            }
         }
     }
 }
@@ -423,9 +480,17 @@ FR_Bitmap *FR_Bake_Font_Bitmap(FR_Renderer *font_renderer, int font_height,
     fmt::print("{}\n", image_filename);
 
     FR_Bitmap *rgb_image = debug_bitmap_to_image_rgb(image, subpixel_scale);
-    debug_rgb_image_write_glyphs_bbox(rgb_image, subpixel_scale, num_chars, glyphs, 0x00ff00);
+    debug_image_write_glyphs(rgb_image, subpixel_scale, num_chars, glyphs, 0x00ff00);
     stbi_write_png(image_filename.c_str(), rgb_image->width, rgb_image->height, 3, rgb_image->pixels, rgb_image->width * 3);
     FR_Bitmap_Free(rgb_image);
+
+    std::string image_filename_subpixel = fmt::format("{}-{}-{}-subpixel.png", font_renderer->debug_font_name, first_char, font_height);
+    fmt::print("{}\n", image_filename_subpixel);
+
+    FR_Bitmap *rgb_image_subpixel = debug_bitmap_to_image_rgb_subpixel(image, subpixel_scale);
+    debug_image_write_glyphs_subpixel(rgb_image_subpixel, subpixel_scale, num_chars, glyphs, 0x00ff00);
+    stbi_write_png(image_filename_subpixel.c_str(), rgb_image_subpixel->width, rgb_image_subpixel->height, 3, rgb_image_subpixel->pixels, rgb_image_subpixel->width * 3);
+    FR_Bitmap_Free(rgb_image_subpixel);
 
     return image;
 }
