@@ -256,19 +256,28 @@ static void debug_image_write_glyphs(FR_Bitmap *rgb_image,
         int y = gi.y0;
         agg::int8u *row = rgb_image->pixels + (rgb_image->width * y + gi.x0) * rgb_comp;
         for (int x = gi.x0; x < gi.x1; x++) {
-            row[0] = (color >> 0 ) & 0xff; // (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
-            row[1] = (color >> 8 ) & 0xff; // (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
-            row[2] = (color >> 16) & 0xff; // (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
+            row[0] = (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
+            row[1] = (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
+            row[2] = (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
             row += rgb_comp;
         }
 
         y = gi.y1;
         row = rgb_image->pixels + (rgb_image->width * y + gi.x0) * rgb_comp;
         for (int x = gi.x0; x < gi.x1; x++) {
-            row[0] = (color >> 0 ) & 0xff; // (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
-            row[1] = (color >> 8 ) & 0xff; // (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
-            row[2] = (color >> 16) & 0xff; // (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
+            row[0] = (agg::int32u) row[0] * (((color >> 0 ) & 0xff) + 1) / 256;
+            row[1] = (agg::int32u) row[1] * (((color >> 8 ) & 0xff) + 1) / 256;
+            row[2] = (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
             row += rgb_comp;
+        }
+
+        int x = gi.x0 - gi.xoff;
+        agg::int32u color_off = 0x0000ff;
+        for (int y = gi.y0; y < gi.y1; y++) {
+            row = rgb_image->pixels + (rgb_image->width * y + x) * rgb_comp;
+            row[0] = (agg::int32u) row[0] * (((color_off >> 0 ) & 0xff) + 1) / 256;
+            row[1] = (agg::int32u) row[1] * (((color_off >> 8 ) & 0xff) + 1) / 256;
+            row[2] = (agg::int32u) row[2] * (((color_off >> 16) & 0xff) + 1) / 256;
         }
     }
 }
@@ -301,6 +310,28 @@ static void debug_image_write_glyphs_subpixel(FR_Bitmap *rgb_image,
                 row[2] = (agg::int32u) row[2] * (((color >> 16) & 0xff) + 1) / 256;
                 row += rgb_comp;
             }
+        }
+
+        int x = gi.x0 - gi.xoff;
+        agg::int32u color_off = 0x0000ff;
+        for (int y = gi.y0; y < gi.y1; y++) {
+            row = rgb_image->pixels + (rgb_image->width * y + subpixel_scale * x) * rgb_comp;
+            for (int sub = 0; sub < subpixel_scale; sub++) {
+                row[0] = (agg::int32u) row[0] * (((color_off >> 0 ) & 0xff) + 1) / 256;
+                row[1] = (agg::int32u) row[1] * (((color_off >> 8 ) & 0xff) + 1) / 256;
+                row[2] = (agg::int32u) row[2] * (((color_off >> 16) & 0xff) + 1) / 256;
+                row += rgb_comp;
+            }
+        }
+
+        x = gi.x0 - gi.xoff;
+        agg::int32u color_adv = 0xff0000;
+        for (int y = gi.y0; y < gi.y1; y++) {
+            int x_adv = lroundf(gi.xadvance);
+            row = rgb_image->pixels + (rgb_image->width * y + subpixel_scale * x + x_adv) * rgb_comp;
+            row[0] = (agg::int32u) row[0] * (((color_adv >> 0 ) & 0xff) + 1) / 256;
+            row[1] = (agg::int32u) row[1] * (((color_adv >> 8 ) & 0xff) + 1) / 256;
+            row[2] = (agg::int32u) row[2] * (((color_adv >> 16) & 0xff) + 1) / 256;
         }
     }
 }
