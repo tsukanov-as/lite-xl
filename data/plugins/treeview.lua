@@ -23,8 +23,8 @@ function TreeView:new()
   TreeView.super.new(self)
   self.scrollable = true
   self.visible = true
-  self.init_size = true
   self.target_size = default_treeview_size
+  self.size = { x = self.target_size, y = 0 }
   self.cache = {}
   self.last = {}
 end
@@ -192,20 +192,6 @@ function TreeView:on_mouse_pressed(button, x, y, clicks)
 end
 
 
-function TreeView:update()
-  -- update width
-  local dest = self.visible and self.target_size or 0
-  if self.init_size then
-    self.size.x = dest
-    self.init_size = false
-  else
-    self:move_towards(self.size, "x", dest)
-  end
-
-  TreeView.super.update(self)
-end
-
-
 function TreeView:get_scrollable_size()
   return self.count_lines and self:get_item_height() * (self.count_lines + 1) or math.huge
 end
@@ -287,6 +273,7 @@ end
 command.add(nil, {
   ["treeview:toggle"] = function()
     view.visible = not view.visible
+    core.animate('treeview', view.size, "x", view.visible and 0 or view.target_size, 'quadratic', 0.05)
   end,
 })
 

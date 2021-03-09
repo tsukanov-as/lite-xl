@@ -393,6 +393,7 @@ function core.init()
   core.log_items = {}
   core.docs = {}
   core.threads = setmetatable({}, { __mode = "k" })
+  core.animations = {}
 
   local project_dir_abs = system.absolute_path(project_dir)
   local set_project_ok = project_dir_abs and core.set_project_dir(project_dir_abs)
@@ -846,6 +847,44 @@ local run_threads = coroutine.wrap(function()
 end)
 
 
+function core.animate(name, t, k, value, easing, duration)
+  local start = core.frame_start
+  core.animations[name] = {
+    object = t, key = k,
+    start_time = start, end_time = start + duration,
+    start_value = t[k], end_value = value,
+    easing = easing
+  }
+end
+
+
+local easing_function = {
+  linear    = function(a, b, x) return a + x * (b - a) end,
+  quadratic = function(a, b, x) return a + x^2 * (b - a) end,
+}
+
+
+local function step_animations_running(animations)
+  local t = system.get_time()
+  local name = next(animations)
+  local redraw = false
+  while name do
+    local item = animations[name]
+    if t <= item.end_time then
+      local fraction = (t - item.start_time) / (item.end_time - item.start_time)
+      item.object[item.key] = easing_function[item.easing](item.start_value, item.end_value, fraction)
+    else
+      item.object[item.key] = item.end_value
+      animations[name] = nil
+    end
+    redraw = true
+    name = next(animations, name)
+  end
+  core.redraw = core.redraw or redraw
+  return redraw
+end
+
+
 function core.run()
   local idle_iterations = 0
   local frame_duration = 1 / config.fps
@@ -853,6 +892,7 @@ function core.run()
     core.frame_start = system.get_time()
     local did_redraw = core.step()
     local need_more_work = run_threads()
+    did_redraw = did_redraw or step_animations_running(core.animations)
     if core.restart_request then break end
     if not did_redraw and not need_more_work then
       idle_iterations = idle_iterations + 1
