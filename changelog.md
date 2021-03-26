@@ -6,6 +6,9 @@ This files document the changes done in Lite XL for each release.
 
 Add `system.set_window_opacity` function.
 
+Create new file and directory if the file does not exist when using `core:open-file`.
+Directories can be nested and they are created as needed.
+
 ### 1.16.5
 
 Hotfix for Github's issue https://github.com/franko/lite-xl/issues/122

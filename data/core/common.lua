@@ -196,6 +196,11 @@ function common.serialize(val)
 end
 
 
+function common.dirname(path)
+  return path:match("(.*)[/\\][^\\$/]+$")
+end
+
+
 function common.basename(path)
   -- a path should never end by / or \ except if it is '/' (unix root) or
   -- 'X:\' (windows drive)
@@ -263,6 +268,27 @@ function common.relative_path(ref_dir, dir)
   end
   local rel_path = ups .. table.concat(dir_ls, "/", i)
   return rel_path ~= "" and rel_path or "."
+end
+
+
+function common.create_dir_with_parents(dirname_create)
+  local basedir
+  local subdirs = {}
+  while dirname_create and dirname_create ~= "" do
+    local success_mkdir = system.mkdir(dirname_create)
+    if success_mkdir then break end
+    dirname_create, basedir = dirname_create:match("(.*)[/\\](.+)$")
+    if basedir then
+      subdirs[#subdirs + 1] = basedir
+    end
+  end
+  for _, dirname in ipairs(subdirs) do
+    dirname_create = dirname_create .. PATHSEP .. dirname
+    if not system.mkdir(dirname_create) then
+      return false, "cannot create directory: \"" .. dirname_create .. "\""
+    end
+  end
+  return true
 end
 
 

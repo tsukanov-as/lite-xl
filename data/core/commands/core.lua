@@ -85,7 +85,18 @@ command.add(nil, {
 
   ["core:open-file"] = function()
     core.command_view:enter("Open File", function(text)
-      core.root_view:open_doc(core.open_doc(common.home_expand(text)))
+      local filename = common.home_expand(text)
+      local info, err = system.get_file_info(filename)
+      if not info then
+        local dirname = common.dirname(filename)
+        local info_dir = system.get_file_info(dirname)
+        if not info_dir then
+          assert(common.create_dir_with_parents(dirname))
+        elseif info_dir.type ~= 'dir' then
+          error(string.format("invalid file name: %q is not a directory", dirname))
+        end
+      end
+      core.root_view:open_doc(core.open_doc(filename))
     end, function (text)
       return common.home_encode_list(common.path_suggest(common.home_expand(text)))
     end)

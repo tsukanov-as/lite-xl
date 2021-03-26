@@ -217,25 +217,10 @@ end
 -- create a directory using mkdir but may need to create the parent
 -- directories as well.
 local function create_user_directory()
-  local dirname_create = USERDIR
-  local basedir
-  local subdirs = {}
-  while dirname_create and dirname_create ~= "" do
-    local success_mkdir = system.mkdir(dirname_create)
-    if success_mkdir then break end
-    dirname_create, basedir = dirname_create:match("(.*)[/\\](.+)$")
-    if basedir then
-      subdirs[#subdirs + 1] = basedir
-    end
-  end
-  for _, dirname in ipairs(subdirs) do
-    dirname_create = dirname_create .. '/' .. dirname
-    if not system.mkdir(dirname_create) then
-      error("cannot create directory: \"" .. dirname_create .. "\"")
-    end
-  end
+  local create_ok, err = common.create_dir_with_parents(USERDIR)
+  if not create_ok then error(err) end
   for _, modname in ipairs {'plugins', 'colors', 'fonts'} do
-    local subdirname = dirname_create .. '/' .. modname
+    local subdirname = USERDIR .. PATHSEP .. modname
     if not system.mkdir(subdirname) then
       error("cannot create directory: \"" .. subdirname .. "\"")
     end
@@ -639,7 +624,7 @@ function core.pop_clip_rect()
 end
 
 
-function core.open_doc(filename)
+function core.open_doc(filename, new_if_not_exists)
   if filename then
     -- try to find existing doc for filename
     local abs_filename = system.absolute_path(filename)
@@ -651,7 +636,7 @@ function core.open_doc(filename)
     end
   end
   -- no existing doc for filename; create new
-  local doc = Doc(filename)
+  local doc = Doc(filename, true)
   table.insert(core.docs, doc)
   core.log_quiet(filename and "Opened doc \"%s\"" or "Opened new doc", filename)
   return doc
