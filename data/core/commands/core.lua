@@ -94,11 +94,11 @@ command.add(nil, {
           if not info_dir then
             assert(common.create_dir_with_parents(dirname))
           elseif info_dir.type ~= 'dir' then
-            error(string.format("invalid file name: %q is not a directory", dirname))
+            error(string.format("invalid file name: \"%s\" is not a directory", dirname))
           end
         end
         local f = io.open(filename, "w")
-        if not f then error(string.format("Cannot write filename: %q", filename)) end
+        if not f then error(string.format("Cannot write filename: \"%s\"", filename)) end
         f:close()
       end
       core.root_view:open_doc(core.open_doc(filename))

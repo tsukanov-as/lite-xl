@@ -275,7 +275,10 @@ function common.create_dir_with_parents(dirname_create)
   local basedir
   local subdirs = {}
   while dirname_create and dirname_create ~= "" do
-    local success_mkdir = system.mkdir(dirname_create)
+    local success_mkdir, err = system.mkdir(dirname_create)
+    if not success_mkdir and (err:match("Permission denied") or err:match("File exists")) then
+      error(string.format("Cannot create directory: \"%s\"", dirname_create))
+    end
     if success_mkdir then break end
     dirname_create, basedir = dirname_create:match("(.*)[/\\](.+)$")
     if basedir then
