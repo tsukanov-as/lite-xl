@@ -84,17 +84,22 @@ command.add(nil, {
   end,
 
   ["core:open-file"] = function()
-    core.command_view:enter("Open File", function(text)
-      local filename = common.home_expand(text)
+    core.command_view:enter("Open File", function(text, item)
+      local filename = common.home_expand(item and item.text or text)
       local info, err = system.get_file_info(filename)
       if not info then
         local dirname = common.dirname(filename)
-        local info_dir = system.get_file_info(dirname)
-        if not info_dir then
-          assert(common.create_dir_with_parents(dirname))
-        elseif info_dir.type ~= 'dir' then
-          error(string.format("invalid file name: %q is not a directory", dirname))
+        if dirname then
+          local info_dir = system.get_file_info(dirname)
+          if not info_dir then
+            assert(common.create_dir_with_parents(dirname))
+          elseif info_dir.type ~= 'dir' then
+            error(string.format("invalid file name: %q is not a directory", dirname))
+          end
         end
+        local f = io.open(filename, "w")
+        if not f then error(string.format("Cannot write filename: %q", filename)) end
+        f:close()
       end
       core.root_view:open_doc(core.open_doc(filename))
     end, function (text)

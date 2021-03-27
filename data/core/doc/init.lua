@@ -36,13 +36,10 @@ local function splice(t, at, remove, insert)
 end
 
 
-function Doc:new(filename, new_file)
+function Doc:new(filename)
   self:reset()
-  if filename and not new_file then
+  if filename then
     self:load(filename)
-  elseif new_file then
-    self:set_filename(filename)
-    self:reset_syntax()
   end
 end
 

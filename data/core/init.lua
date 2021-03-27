@@ -624,7 +624,7 @@ function core.pop_clip_rect()
 end
 
 
-function core.open_doc(filename, new_if_not_exists)
+function core.open_doc(filename)
   if filename then
     -- try to find existing doc for filename
     local abs_filename = system.absolute_path(filename)
@@ -636,7 +636,7 @@ function core.open_doc(filename, new_if_not_exists)
     end
   end
   -- no existing doc for filename; create new
-  local doc = Doc(filename, true)
+  local doc = Doc(filename)
   table.insert(core.docs, doc)
   core.log_quiet(filename and "Opened doc \"%s\"" or "Opened new doc", filename)
   return doc
