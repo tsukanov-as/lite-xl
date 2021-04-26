@@ -214,6 +214,29 @@ static void push_rect(RenRect r, int *count) {
 }
 
 
+static void normalize_rects(int count) {
+  const int N = CELL_SIZE;
+  const RenRect cr = screen_rect;
+  int index = count;
+  for (int i = 0; i < count; i++) {
+    const RenRect *r = &rect_buf[i];
+    int x1 = (r->x / N) * N;
+    int y1 = (r->y / N) * N;
+    int x2 = ((r->x + r->width  + N - 1) / N) * N;
+    int y2 = ((r->y + r->height + N - 1) / N) * N;
+    rect_buf[i] = (RenRect) {x1, y1, N, N};
+    for (int y = y1 + N; y < y2; y += N) {
+      rect_buf[index++] = intersect_rects((RenRect) {x1, y, N, N}, cr);
+    }
+    for (int x = x1 + N; x < x2; x += N) {
+      for (int y = y1; y < y2; y += N) {
+        rect_buf[index++] = intersect_rects((RenRect) {x, y, N, N}, cr);
+      }
+    }
+  }
+}
+
+
 void rencache_end_frame(void) {
   /* update cells from commands */
   Command *cmd = NULL;
@@ -290,6 +313,8 @@ void rencache_end_frame(void) {
       ren_draw_rect(r, color);
     }
   }
+
+  normalize_rects(rect_count);
 
   /* update dirty rects */
   if (rect_count > 0) {
